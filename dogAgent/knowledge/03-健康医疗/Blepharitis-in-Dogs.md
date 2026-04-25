@@ -1,0 +1,151 @@
+---
+source: PetMD
+url: "https://www.petmd.com/dog/conditions/eyes/c_dg_blepharitis"
+title: Blepharitis in Dogs
+category: 健康医疗/常见疾病
+tags: ["眼部"]
+language: en
+reliability: 高
+author: ByKate Bedard, DVM, DACVO
+date: 
+crawl_date: 2026-04-24
+wiki_processed: true
+---
+
+# Blepharitis in Dogs
+
+[](/author/dr-katie-bedard)
+
+By [Kate Bedard, DVM, DACVO](/author/dr-katie-bedard)
+
+Published Dec. 30, 2021
+
+### In This Article
+
+[Summary](/dog/conditions/eyes/c_dg_blepharitis#summary)
+
+View 6 More +
+
+## What Is Canine Blepharitis?
+
+Blepharitis is a condition that causes inflammation (swelling) of the eyelid and/or the edges of the eyelid. Blepharitis causes discomfort in dogs, but since it does not pose an immediate threat to your dog’s vision or overall health, it is not considered an emergency.
+
+Most cases of blepharitis will require treatment with prescription medication, so if you see swelling in your dog’s eyelid, take your dog to a vet so they can be examined and a treatment plan can be created. Cases of blepharitis that are not treated appropriately will result in severe scarring of the eyelid, which may stop the eyelid from working correctly and later result in injury to the eye itself.
+
+## Symptoms of Blepharitis in Dogs
+
+The most common symptoms of blepharitis in dogs include:
+
+  * Swelling
+
+  * Redness
+
+  * Hair loss on eyelid skin
+
+  * Squinting
+
+  * Excessive [ocular discharge](https://www.petmd.com/dog/general-health/5-types-dog-eye-discharge-and-what-they-mean) (pus or mucus coming from the eye)
+
+
+
+Certain types of blepharitis can also cause itchiness, which will make your dog try to rub their face with their paws or on nearby surfaces. Severe cases of blepharitis can result in [ulcers](https://www.petmd.com/dog/conditions/skin/c_multi_dermatoses_erosive_ulcerative) and sores on the skin.
+
+## Causes of Blepharitis in Dogs
+
+Blepharitis in dogs can be the result of infection with bacteria, fungus, or parasites. It can also be caused by autoimmune diseases, where the body’s immune system mistakenly attacks the eyelid tissue. Certain types of cancer may also cause blepharitis.
+
+One of the most common causes of blepharitis in dogs is allergies. These allergies can be due to environmental irritants (like [grass](https://www.petmd.com/dog/conditions/skin/can-dogs-be-allergic-grass), pollen, mold, or dust) or sometimes your dog’s food.
+
+## How Veterinarians Diagnose Blepharitis in Dogs
+
+Blepharitis is diagnosed based on signs including swollen, red, and irritated eyelid skin. Your veterinarian may recommend plucking a few hairs or swabbing/scraping the skin for samples to check for bacteria or parasites. In other cases, the vet may do a culture of the skin to diagnose a bacterial or fungal infection.
+
+If your vet suspects the cause is related to an autoimmune disease, they might do a biopsy of the eyelid tissue. In this procedure, a small section of tissue is removed and examined for abnormalities. Finally, a positive response to medication can also sometimes confirm a suspected cause.
+
+## Treatment for Blepharitis in Dogs
+
+Where possible, treatment of blepharitis is aimed at fixing the underlying cause. For bacterial infections, that may mean treatment with topical or oral antibiotics, as well as topical or oral anti-inflammatory medications to treat the pain and inflammation.
+
+Similarly, fungal and parasitic infections are treated with anti-fungal medications and parasiticides, respectively. Cleaning of the eyelid skin with safe-for-the-eye cleansers is also helpful when treating infectious cases of blepharitis.
+
+Autoimmune causes of blepharitis are treated using medications that suppress the immune system. This kind of therapy must be continued for the rest of your dog’s life to keep the disease controlled. If you stop treatment, the symptoms will return.
+
+Allergic causes of blepharitis are sometimes treated with short courses of steroids or medications like [cyclosporine](https://www.petmd.com/pet-medication/cyclosporine-ophthalmic-ointment) for longer therapy. In cases of underlying food allergies, blepharitis can be resolved by changing your dog’s diet and avoiding certain ingredients.
+
+## Recovery and Management of Blepharitis in Dogs
+
+Targeted therapy for blepharitis results in quick improvement of symptoms. Dogs with infectious causes of blepharitis do extremely well once treated with the right medication and are not at risk of developing problems in the future. When blepharitis is caused by autoimmune disease or an allergy, pets must often continue some degree of medical therapy for the long term to control symptoms.
+
+## Blepharitis in Dogs FAQs
+
+### How long does dog blepharitis last?
+
+Blepharitis will usually improve within a few days of starting the right therapy. Most clinical signs will be controlled completely after two weeks of treatment. Autoimmune and allergy-related forms of blepharitis may require long-term therapy or symptoms will return.
+
+### What is the fastest way to cure blepharitis?
+
+The fastest way to cure blepharitis is to start specific, targeted therapy. The best way to do this is by having your vet perform diagnostic testing to find the underlying cause of the inflammation (swelling).
+
+### How do you treat blepharitis in dogs at home?
+
+Blepharitis treatment should be performed under the direction of a licensed veterinarian. Topical cleaners and medications must be chosen carefully to avoid damaging the nearby cornea and ocular surface (outer layer of the eye). Delay in seeking treatment for blepharitis can result in permanent scarring of the eyelid skin and the area around the eyelid.
+
+### References
+
+  1. Peña MT, Leiva M. Canine Conjunctivitis and Blepharitis. Veterinary Clinics of North America: Small Animal Practice. 2008;38(2):233-249.
+
+
+
+  2. Whitley, RD. Canine and Feline Primary Ocular Bacterial Infections. Veterinary Clinics of North America: Small Animal Practice. 2000;30(5):1151-1167.
+
+
+
+Featured Image: iStock.com/DjelicS
+
+### References
+
+Close
+
+* * *
+
+[](/author/dr-katie-bedard)
+
+WRITTEN BY
+
+[Kate Bedard, DVM, DACVO](/author/dr-katie-bedard)
+
+Veterinarian
+
+Dr. Kate Bedard graduated from North Carolina State University College of Veterinary Medicine in 2014, went on to complete a small animal...
+
+* * *
+
+## Help us make PetMD better
+
+Was this article helpful?
+
+YesNo
+
+* * *
+
+## Related Articles
+
+[Red Eyes in DogsBarri J. Morrison, DVM](/dog/symptoms/red-eyes-in-dogs)[Fever in Dogs: Signs, Symptoms, and TreatmentCathy Meeks, MS, DVM, DACVIM](/dog/care/why-do-dogs-get-fevers)[Is My Dog Dehydrated?Michelle Diener, DVM](/dog/symptoms/is-my-dog-dehydrated)[Dog Wheezing: Causes and Treatment OptionsJamie Lovejoy, DVM](/dog/symptom/dog-wheezing-causes-and-treatment)[Excessive Drooling in DogsPetMD Editorial](/dog/symptoms/excessive-drooling-in-dogs)[Dog Scooting: Why Dogs Drag Their Butts and What to Do About ItMichael Kearley, DVM](/dog/symptoms/dog-scooting)
+
+[](https://www.chewy.com/b/connect-vet-16616)
+
+## Subscribe to Our Newsletter
+
+Sign up for weekly pet health tips and insights from our veterinarians.
+
+Email Address
+
+Subscribe
+
+
+---
+
+## 参考来源
+
+- [PetMD](https://www.petmd.com/dog/conditions/eyes/c_dg_blepharitis)
+- 爬取时间: 2026-04-24 21:59

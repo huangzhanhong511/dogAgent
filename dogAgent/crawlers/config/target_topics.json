@@ -1,0 +1,524 @@
+{
+  "topics": [
+    {
+      "id": "giant_schnauzer",
+      "title_zh": "巨型雪纳瑞",
+      "title_en": "Giant Schnauzer",
+      "category": "01-品种百科",
+      "preferred_sources": ["petmd", "akc"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "feeding_guide",
+      "title_zh": "雪纳瑞喂食指南",
+      "title_en": "Schnauzer Feeding Guide",
+      "category": "02-饮食营养",
+      "preferred_sources": ["petmd", "vca"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "pancreatitis_diet",
+      "title_zh": "胰腺炎饮食管理",
+      "title_en": "Pancreatitis Diet Management",
+      "category": "02-饮食营养",
+      "preferred_sources": ["vca", "petmd"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "toxic_foods",
+      "title_zh": "犬禁忌食物完整清单",
+      "title_en": "Complete List of Toxic Foods for Dogs",
+      "category": "02-饮食营养",
+      "preferred_sources": ["aspca", "petmd"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "hyperlipidemia_diet",
+      "title_zh": "高脂血症饮食管理",
+      "title_en": "Hyperlipidemia Diet Management",
+      "category": "02-饮食营养",
+      "preferred_sources": ["petmd", "vca"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "homemade_dog_food",
+      "title_zh": "自制狗饭入门指南",
+      "title_en": "Homemade Dog Food Guide",
+      "category": "02-饮食营养",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": "食谱模板",
+      "priority": "P2"
+    },
+    {
+      "id": "dog_food_selection",
+      "title_zh": "狗粮选择指南",
+      "title_en": "Dog Food Selection Guide",
+      "category": "02-饮食营养",
+      "preferred_sources": ["petmd", "akc"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P2"
+    },
+    {
+      "id": "treats_rewards",
+      "title_zh": "雪纳瑞零食与奖励",
+      "title_en": "Schnauzer Treats and Rewards",
+      "category": "02-饮食营养",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P2"
+    },
+    {
+      "id": "pancreatitis",
+      "title_zh": "犬胰腺炎",
+      "title_en": "Pancreatitis in Dogs",
+      "category": "03-健康医疗",
+      "preferred_sources": ["petmd", "vca"],
+      "fallback": "llm_generate",
+      "template": "疾病模板",
+      "priority": "P0"
+    },
+    {
+      "id": "bladder_stones",
+      "title_zh": "犬膀胱结石",
+      "title_en": "Bladder Stones in Dogs",
+      "category": "03-健康医疗",
+      "preferred_sources": ["petmd", "vca"],
+      "fallback": "llm_generate",
+      "template": "疾病模板",
+      "priority": "P0"
+    },
+    {
+      "id": "ear_infection",
+      "title_zh": "犬耳部感染",
+      "title_en": "Ear Infections in Dogs",
+      "category": "03-健康医疗",
+      "preferred_sources": ["petmd", "vca"],
+      "fallback": "llm_generate",
+      "template": "疾病模板",
+      "priority": "P0"
+    },
+    {
+      "id": "skin_allergy",
+      "title_zh": "犬皮肤过敏与特应性皮炎",
+      "title_en": "Skin Allergies and Atopic Dermatitis in Dogs",
+      "category": "03-健康医疗",
+      "preferred_sources": ["petmd", "vca"],
+      "fallback": "llm_generate",
+      "template": "疾病模板",
+      "priority": "P0"
+    },
+    {
+      "id": "hypothyroidism",
+      "title_zh": "犬甲状腺功能减退",
+      "title_en": "Hypothyroidism in Dogs",
+      "category": "03-健康医疗",
+      "preferred_sources": ["petmd", "vca"],
+      "fallback": "llm_generate",
+      "template": "疾病模板",
+      "priority": "P0"
+    },
+    {
+      "id": "patellar_luxation",
+      "title_zh": "犬髌骨脱位",
+      "title_en": "Patellar Luxation in Dogs",
+      "category": "03-健康医疗",
+      "preferred_sources": ["petmd", "vca"],
+      "fallback": "llm_generate",
+      "template": "疾病模板",
+      "priority": "P1"
+    },
+    {
+      "id": "liver_shunt",
+      "title_zh": "犬肝分流",
+      "title_en": "Liver Shunts in Dogs",
+      "category": "03-健康医疗",
+      "preferred_sources": ["petmd"],
+      "fallback": "llm_generate",
+      "template": "疾病模板",
+      "priority": "P1"
+    },
+    {
+      "id": "dental_disease",
+      "title_zh": "犬牙齿疾病与口腔护理",
+      "title_en": "Dental Disease and Oral Care in Dogs",
+      "category": "03-健康医疗",
+      "preferred_sources": ["vca"],
+      "fallback": "llm_generate",
+      "template": "疾病模板",
+      "priority": "P1"
+    },
+    {
+      "id": "diabetes",
+      "title_zh": "犬糖尿病",
+      "title_en": "Diabetes in Dogs",
+      "category": "03-健康医疗",
+      "preferred_sources": ["petmd", "vca"],
+      "fallback": "llm_generate",
+      "template": "疾病模板",
+      "priority": "P1"
+    },
+    {
+      "id": "cushing",
+      "title_zh": "犬库欣综合征",
+      "title_en": "Cushing's Disease in Dogs",
+      "category": "03-健康医疗",
+      "preferred_sources": ["petmd", "vca"],
+      "fallback": "llm_generate",
+      "template": "疾病模板",
+      "priority": "P1"
+    },
+    {
+      "id": "epilepsy",
+      "title_zh": "犬癫痫与抽搐",
+      "title_en": "Epilepsy and Seizures in Dogs",
+      "category": "03-健康医疗",
+      "preferred_sources": ["vca"],
+      "fallback": "llm_generate",
+      "template": "疾病模板",
+      "priority": "P2"
+    },
+    {
+      "id": "schnauzer_comedo",
+      "title_zh": "雪纳瑞粉刺综合征",
+      "title_en": "Schnauzer Comedo Syndrome",
+      "category": "03-健康医疗",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": "疾病模板",
+      "priority": "P2"
+    },
+    {
+      "id": "vaccination",
+      "title_zh": "犬疫苗接种时间表",
+      "title_en": "Dog Vaccination Schedule",
+      "category": "03-健康医疗",
+      "preferred_sources": ["vca", "akc"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "deworming",
+      "title_zh": "犬驱虫指南",
+      "title_en": "Dog Deworming Guide",
+      "category": "03-健康医疗",
+      "preferred_sources": ["vca"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "spay_neuter",
+      "title_zh": "绝育手术",
+      "title_en": "Spay and Neuter",
+      "category": "03-健康医疗",
+      "preferred_sources": ["vca"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P2"
+    },
+    {
+      "id": "emergency_symptoms",
+      "title_zh": "紧急症状识别手册",
+      "title_en": "Emergency Symptom Recognition",
+      "category": "03-健康医疗",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "senior_care",
+      "title_zh": "老年雪纳瑞护理",
+      "title_en": "Senior Schnauzer Care",
+      "category": "03-健康医疗",
+      "preferred_sources": ["vca"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "coat_care",
+      "title_zh": "雪纳瑞毛发护理与被毛类型",
+      "title_en": "Schnauzer Coat Care and Types",
+      "category": "04-美容护理",
+      "preferred_sources": ["akc"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "hand_stripping",
+      "title_zh": "手剥技术详解",
+      "title_en": "Hand Stripping Guide",
+      "category": "04-美容护理",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "standard_grooming",
+      "title_zh": "雪纳瑞标准造型指南",
+      "title_en": "Schnauzer Standard Grooming Styles",
+      "category": "04-美容护理",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "ear_cleaning",
+      "title_zh": "耳部清洁护理",
+      "title_en": "Ear Cleaning Care",
+      "category": "04-美容护理",
+      "preferred_sources": ["vca"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "beard_care",
+      "title_zh": "胡须护理",
+      "title_en": "Beard Care",
+      "category": "04-美容护理",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "grooming_routine",
+      "title_zh": "日常美容全流程",
+      "title_en": "Daily Grooming Routine",
+      "category": "04-美容护理",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P2"
+    },
+    {
+      "id": "barking_control",
+      "title_zh": "雪纳瑞吠叫控制",
+      "title_en": "Schnauzer Barking Control",
+      "category": "05-训练与行为",
+      "preferred_sources": ["akc"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "socialization",
+      "title_zh": "幼犬社会化关键期",
+      "title_en": "Puppy Socialization",
+      "category": "05-训练与行为",
+      "preferred_sources": ["akc"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "obedience_training",
+      "title_zh": "基础服从训练",
+      "title_en": "Basic Obedience Training",
+      "category": "05-训练与行为",
+      "preferred_sources": ["akc"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "separation_anxiety",
+      "title_zh": "分离焦虑应对",
+      "title_en": "Separation Anxiety",
+      "category": "05-训练与行为",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "temperament",
+      "title_zh": "雪纳瑞性格深度分析",
+      "title_en": "Schnauzer Temperament Analysis",
+      "category": "05-训练与行为",
+      "preferred_sources": ["akc"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P2"
+    },
+    {
+      "id": "potty_training",
+      "title_zh": "如厕训练",
+      "title_en": "Potty Training",
+      "category": "05-训练与行为",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P2"
+    },
+    {
+      "id": "exercise_guide",
+      "title_zh": "雪纳瑞每日运动量指南",
+      "title_en": "Schnauzer Exercise Guide",
+      "category": "06-日常饲养",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "first_week",
+      "title_zh": "新犬到家第一周指南",
+      "title_en": "First Week Home Guide",
+      "category": "06-日常饲养",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "supplies_checklist",
+      "title_zh": "必备用品购物清单",
+      "title_en": "Essential Supplies Checklist",
+      "category": "06-日常饲养",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "seasonal_care",
+      "title_zh": "季节性护理指南",
+      "title_en": "Seasonal Care Guide",
+      "category": "06-日常饲养",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "daily_dental",
+      "title_zh": "牙齿日常护理",
+      "title_en": "Daily Dental Care",
+      "category": "06-日常饲养",
+      "preferred_sources": ["vca"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "multi_pet",
+      "title_zh": "多宠家庭适应",
+      "title_en": "Multi-Pet Household",
+      "category": "06-日常饲养",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P2"
+    },
+    {
+      "id": "travel",
+      "title_zh": "出行与旅行",
+      "title_en": "Travel with Dogs",
+      "category": "06-日常饲养",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P2"
+    },
+    {
+      "id": "breeder_selection",
+      "title_zh": "如何选择靠谱犬舍",
+      "title_en": "How to Choose a Reputable Breeder",
+      "category": "07-繁殖与幼犬",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "genetic_screening",
+      "title_zh": "雪纳瑞遗传疾病筛查",
+      "title_en": "Schnauzer Genetic Disease Screening",
+      "category": "07-繁殖与幼犬",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P0"
+    },
+    {
+      "id": "puppy_milestones",
+      "title_zh": "幼犬发育里程碑",
+      "title_en": "Puppy Development Milestones",
+      "category": "07-繁殖与幼犬",
+      "preferred_sources": ["akc"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "puppy_vaccination",
+      "title_zh": "幼犬疫苗与驱虫时间表",
+      "title_en": "Puppy Vaccination and Deworming",
+      "category": "07-繁殖与幼犬",
+      "preferred_sources": ["vca"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "puppy_diet",
+      "title_zh": "幼犬饮食指南",
+      "title_en": "Puppy Diet Guide",
+      "category": "07-繁殖与幼犬",
+      "preferred_sources": ["vca"],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "city_regulations",
+      "title_zh": "中国主要城市养犬规定",
+      "title_en": "Dog Ownership Regulations in Chinese Cities",
+      "category": "08-法规与养犬常识",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P1"
+    },
+    {
+      "id": "annual_cost",
+      "title_zh": "养犬年度费用估算",
+      "title_en": "Annual Cost of Dog Ownership",
+      "category": "08-法规与养犬常识",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P2"
+    },
+    {
+      "id": "pet_insurance",
+      "title_zh": "宠物保险指南",
+      "title_en": "Pet Insurance Guide",
+      "category": "08-法规与养犬常识",
+      "preferred_sources": [],
+      "fallback": "llm_generate",
+      "template": null,
+      "priority": "P2"
+    }
+  ]
+}

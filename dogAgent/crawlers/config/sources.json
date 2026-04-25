@@ -1,0 +1,170 @@
+{
+  "sources": {
+    "akc": {
+      "name": "American Kennel Club",
+      "base_url": "https://www.akc.org",
+      "language": "en",
+      "reliability": "高",
+      "urls": [
+        "https://www.akc.org/dog-breeds/miniature-schnauzer/",
+        "https://www.akc.org/dog-breeds/standard-schnauzer/",
+        "https://www.akc.org/dog-breeds/giant-schnauzer/",
+        "https://www.akc.org/expert-advice/health/",
+        "https://www.akc.org/expert-advice/nutrition/",
+        "https://www.akc.org/expert-advice/training/",
+        "https://www.akc.org/expert-advice/lifestyle/",
+        "https://www.akc.org/expert-advice/dog-breeding/"
+      ],
+      "search_keywords": [
+        "schnauzer",
+        "miniature schnauzer",
+        "schnauzer health",
+        "schnauzer grooming",
+        "schnauzer training",
+        "schnauzer diet",
+        "schnauzer puppies"
+      ]
+    },
+    "petmd": {
+      "name": "PetMD",
+      "base_url": "https://www.petmd.com",
+      "language": "en",
+      "reliability": "高",
+      "urls": [
+        "https://www.petmd.com/dog/breeds/miniature-schnauzer",
+        "https://www.petmd.com/dog/breeds/standard-schnauzer",
+        "https://www.petmd.com/dog/breeds/giant-schnauzer",
+        "https://www.petmd.com/dog/conditions",
+        "https://www.petmd.com/dog/nutrition",
+        "https://www.petmd.com/dog/care",
+        "https://www.petmd.com/dog/emergency"
+      ],
+      "search_keywords": [
+        "schnauzer",
+        "pancreatitis dog",
+        "urinary stones dog",
+        "dog skin disease",
+        "dog cataracts",
+        "dog ear infection",
+        "patellar luxation",
+        "hypothyroidism dog",
+        "dog diabetes",
+        "cushing disease dog",
+        "dog dental disease",
+        "dog vaccination schedule",
+        "dog deworming",
+        "dog nutrition",
+        "dog toxic foods",
+        "dog first aid",
+        "dog grooming",
+        "puppy training",
+        "dog behavior problems"
+      ]
+    },
+    "aspca": {
+      "name": "ASPCA",
+      "base_url": "https://www.aspca.org",
+      "language": "en",
+      "reliability": "高",
+      "urls": [
+        "https://www.aspca.org/pet-care/animal-poison-control/people-foods-avoid-feeding-your-pets",
+        "https://www.aspca.org/pet-care/animal-poison-control/toxic-and-non-toxic-plants",
+        "https://www.aspca.org/pet-care/dog-care"
+      ],
+      "search_keywords": [
+        "toxic foods dogs",
+        "poisonous plants dogs",
+        "dog care",
+        "dog emergency"
+      ]
+    },
+    "vca": {
+      "name": "VCA Animal Hospitals",
+      "base_url": "https://vcahospitals.com",
+      "language": "en",
+      "reliability": "高",
+      "urls": [
+        "https://vcahospitals.com/know-your-pet/dog"
+      ],
+      "search_keywords": [
+        "schnauzer",
+        "pancreatitis",
+        "bladder stones",
+        "skin allergies dog",
+        "ear infections dog",
+        "dog vaccinations",
+        "dog dental care",
+        "dog nutrition",
+        "puppy care",
+        "senior dog care"
+      ]
+    },
+    "merck_vet": {
+      "name": "Merck Veterinary Manual",
+      "base_url": "https://www.merckvetmanual.com",
+      "language": "en",
+      "reliability": "高",
+      "urls": [
+        "https://www.merckvetmanual.com/dog-owners"
+      ],
+      "search_keywords": [
+        "pancreatitis",
+        "urolithiasis",
+        "dermatitis",
+        "otitis externa",
+        "patellar luxation",
+        "hypothyroidism",
+        "diabetes mellitus",
+        "hyperadrenocorticism"
+      ]
+    },
+    "boqii": {
+      "name": "波奇网",
+      "base_url": "https://www.boqii.com",
+      "language": "zh",
+      "reliability": "中",
+      "urls": [
+        "https://www.boqii.com/breed/detail/50.html"
+      ],
+      "search_keywords": [
+        "雪纳瑞",
+        "雪纳瑞饲养",
+        "雪纳瑞疾病",
+        "雪纳瑞美容",
+        "雪纳瑞训练",
+        "雪纳瑞胰腺炎",
+        "雪纳瑞耳朵",
+        "雪纳瑞皮肤病",
+        "雪纳瑞老年犬",
+        "雪纳瑞幼犬"
+      ]
+    },
+    "reddit": {
+      "name": "Reddit r/schnauzers",
+      "base_url": "https://www.reddit.com",
+      "language": "en",
+      "reliability": "中",
+      "subreddits": [
+        "schnauzers",
+        "MiniatureSchnauzer",
+        "dogs"
+      ],
+      "search_keywords": [
+        "schnauzer health",
+        "schnauzer diet",
+        "schnauzer grooming",
+        "schnauzer training",
+        "schnauzer puppy",
+        "schnauzer pancreatitis"
+      ]
+    }
+  },
+  "crawl_settings": {
+    "delay_between_requests": 2,
+    "max_retries": 3,
+    "timeout": 30,
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "respect_robots_txt": true,
+    "max_pages_per_source": 200
+  }
+}

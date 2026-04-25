@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐾 dogAgent — 雪纳瑞知识助手</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f5f5f5;--sidebar:#1a1a2e;--sidebar-text:#e0e0e0;--primary:#4a90d9;--user-bg:#4a90d9;--bot-bg:#fff;--border:#e0e0e0;--text:#333;--text-light:#888}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+
+/* Sidebar */
+.sidebar{width:260px;background:var(--sidebar);color:var(--sidebar-text);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:20px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-header h2{font-size:18px;display:flex;align-items:center;gap:8px}
+.sidebar-header p{font-size:12px;color:#999;margin-top:4px}
+.new-chat-btn{margin:12px 16px;padding:10px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;transition:background .2s}
+.new-chat-btn:hover{background:#3a7bc8}
+.session-list{flex:1;overflow-y:auto;padding:8px}
+.session-item{padding:10px 16px;border-radius:8px;cursor:pointer;font-size:13px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .2s;display:flex;align-items:center;justify-content:space-between}
+.session-item:hover{background:rgba(255,255,255,.1)}
+.session-item.active{background:rgba(74,144,217,.3)}
+.session-item .session-title{flex:1;overflow:hidden;text-overflow:ellipsis}
+.session-item .del-btn{display:none;background:none;border:none;color:#888;cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;flex-shrink:0;margin-left:4px}
+.session-item:hover .del-btn{display:inline-block}
+.session-item .del-btn:hover{color:#e74c3c;background:rgba(255,255,255,.1)}
+.sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.1);font-size:12px;color:#aaa;display:flex;align-items:center;justify-content:space-between}
+.sidebar-footer .user-info{display:flex;align-items:center;gap:6px}
+.sidebar-footer .logout-btn{background:none;border:none;color:#888;cursor:pointer;font-size:12px;padding:4px 8px;border-radius:4px;transition:all .2s}
+.sidebar-footer .logout-btn:hover{color:#fff;background:rgba(255,255,255,.1)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* Header */
+.header{padding:12px 24px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.header h3{font-size:16px;font-weight:500}
+.header .status{font-size:12px;color:var(--text-light)}
+
+/* Messages */
+.messages{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px}
+.message{display:flex;gap:12px;max-width:80%;animation:fadeIn .3s ease}
+.message.user{align-self:flex-end;flex-direction:row-reverse}
+.message .avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.message.user .avatar{background:var(--user-bg);color:#fff}
+.message.bot .avatar{background:#f0f0f0}
+.message .bubble{padding:12px 16px;border-radius:16px;line-height:1.6;font-size:14px;word-break:break-word}
+.message.user .bubble{background:var(--user-bg);color:#fff;border-bottom-right-radius:4px}
+.message.bot .bubble{background:var(--bot-bg);border:1px solid var(--border);border-bottom-left-radius:4px}
+.message.bot .bubble p{margin-bottom:8px}
+.message.bot .bubble p:last-child{margin-bottom:0}
+.message.bot .bubble code{background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:13px}
+.message.bot .bubble pre{background:#f5f5f5;padding:12px;border-radius:8px;overflow-x:auto;margin:8px 0}
+.message.bot .bubble ul,.message.bot .bubble ol{padding-left:20px;margin:8px 0}
+.sources{margin-top:8px;font-size:11px;color:var(--text-light)}
+.sources span{background:#f0f0f0;padding:2px 8px;border-radius:10px;margin-right:4px}
+
+/* Typing */
+.typing{display:flex;gap:4px;padding:8px 16px}
+.typing span{width:8px;height:8px;background:#ccc;border-radius:50%;animation:bounce .6s infinite alternate}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+
+/* Input */
+.input-area{padding:16px 24px;background:#fff;border-top:1px solid var(--border)}
+.input-wrap{display:flex;gap:8px;max-width:800px;margin:0 auto}
+.input-wrap textarea{flex:1;padding:12px 16px;border:1px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:none;outline:none;max-height:120px;line-height:1.5;transition:border-color .2s}
+.input-wrap textarea:focus{border-color:var(--primary)}
+.send-btn{padding:0 20px;background:var(--primary);color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:16px;transition:background .2s;align-self:flex-end;height:44px}
+.send-btn:hover{background:#3a7bc8}
+.send-btn:disabled{background:#ccc;cursor:not-allowed}
+
+/* Welcome */
+.welcome{text-align:center;padding:60px 20px;color:var(--text-light)}
+.welcome h2{font-size:28px;margin-bottom:12px;color:var(--text)}
+.welcome p{font-size:14px;margin-bottom:24px}
+.welcome .hints{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.welcome .hint{padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:13px;transition:all .2s}
+.welcome .hint:hover{border-color:var(--primary);color:var(--primary)}
+
+/* Auth Modal */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal-overlay.hidden{display:none}
+.auth-modal{background:#fff;border-radius:16px;padding:40px;width:380px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.auth-modal h2{text-align:center;margin-bottom:8px;font-size:24px}
+.auth-modal .subtitle{text-align:center;color:var(--text-light);font-size:14px;margin-bottom:24px}
+.auth-modal .form-group{margin-bottom:16px}
+.auth-modal label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:var(--text)}
+.auth-modal input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;transition:border-color .2s}
+.auth-modal input:focus{border-color:var(--primary)}
+.auth-modal .auth-btn{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;transition:background .2s;margin-top:8px}
+.auth-modal .auth-btn:hover{background:#3a7bc8}
+.auth-modal .auth-btn:disabled{background:#ccc;cursor:not-allowed}
+.auth-modal .switch-mode{text-align:center;margin-top:16px;font-size:13px;color:var(--text-light)}
+.auth-modal .switch-mode a{color:var(--primary);cursor:pointer;text-decoration:none}
+.auth-modal .switch-mode a:hover{text-decoration:underline}
+.auth-modal .error-msg{color:#e74c3c;font-size:13px;text-align:center;margin-top:12px;min-height:18px}
+
+/* Summary card in message history */
+.summary-card{margin:8px 0;padding:10px 14px;background:#f8f9fa;border-left:3px solid var(--primary);border-radius:0 8px 8px 0;font-size:13px;color:#666;line-height:1.5}
+.summary-card .summary-label{font-size:11px;color:var(--primary);font-weight:500;margin-bottom:4px}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes bounce{to{transform:translateY(-6px)}}
+
+/* Preferences panel */
+.prefs-section{border-top:1px solid rgba(255,255,255,.1);flex-shrink:0}
+.prefs-toggle{padding:10px 16px;cursor:pointer;font-size:12px;color:#aaa;display:flex;align-items:center;justify-content:space-between;user-select:none;transition:color .2s}
+.prefs-toggle:hover{color:#ddd}
+.prefs-toggle .arrow{transition:transform .2s;font-size:10px}
+.prefs-toggle.open .arrow{transform:rotate(180deg)}
+.prefs-body{padding:0 12px 10px;display:none}
+.prefs-body.open{display:block}
+.pref-item{font-size:12px;color:#ccc;padding:4px 0 4px 4px;border-bottom:1px solid rgba(255,255,255,.05);line-height:1.4;word-break:break-word}
+.pref-item:last-child{border-bottom:none}
+.pref-empty{font-size:12px;color:#666;padding:4px;font-style:italic}
+.pref-add{display:flex;gap:6px;margin-top:8px}
+.pref-add input{flex:1;padding:6px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#ddd;font-size:12px;outline:none}
+.pref-add input::placeholder{color:#666}
+.pref-add input:focus{border-color:var(--primary)}
+.pref-add button{padding:6px 10px;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;flex-shrink:0}
+.pref-add button:hover{background:#3a7bc8}
+
+/* Mobile */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .message{max-width:95%}
+  .auth-modal{padding:28px 20px}
+}
+</style>
+</head>
+<body>
+
+<!-- Auth Modal -->
+<div class="modal-overlay hidden" id="authModal">
+  <div class="auth-modal">
+    <h2 id="authTitle">🐾 登录</h2>
+    <p class="subtitle" id="authSubtitle">登录以开始使用 dogAgent</p>
+    <div class="form-group" id="displayNameGroup" style="display:none">
+      <label>显示名称（可选）</label>
+      <input type="text" id="authDisplayName" placeholder="你希望被如何称呼？">
+    </div>
+    <div class="form-group">
+      <label>用户名</label>
+      <input type="text" id="authUsername" placeholder="输入用户名" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>密码</label>
+      <input type="password" id="authPassword" placeholder="输入密码" autocomplete="current-password">
+    </div>
+    <button class="auth-btn" id="authBtn" onclick="submitAuth()">登录</button>
+    <div class="switch-mode" id="authSwitch">
+      还没有账号？<a onclick="toggleAuthMode()">注册</a>
+    </div>
+    <div class="error-msg" id="authError"></div>
+  </div>
+</div>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h2>🐾 dogAgent</h2>
+    <p>雪纳瑞知识助手</p>
+  </div>
+  <button class="new-chat-btn" onclick="newSession()">＋ 新建对话</button>
+  <div class="session-list" id="sessionList"></div>
+  <!-- Preferences panel -->
+  <div class="prefs-section" id="prefsSection" style="display:none">
+    <div class="prefs-toggle" id="prefsToggle" onclick="togglePrefsPanel()">
+      <span>⚙️ 记忆偏好</span><span class="arrow">▼</span>
+    </div>
+    <div class="prefs-body" id="prefsBody">
+      <div id="prefsList"></div>
+      <div class="pref-add">
+        <input type="text" id="prefInput" placeholder="添加偏好（如：我家狗叫旺旺）">
+        <button onclick="addPref()">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <span id="currentUser">未登录</span>
+    </div>
+    <button class="logout-btn" id="logoutBtn" onclick="logout()" style="display:none">退出</button>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="header">
+    <h3 id="headerTitle">新对话</h3>
+    <span class="status" id="headerStatus">就绪</span>
+  </div>
+
+  <div class="messages" id="messages">
+    <div class="welcome" id="welcome">
+      <h2>🐾 你好！我是小雪</h2>
+      <p>专业的雪纳瑞养护知识助手，有什么可以帮你的？</p>
+      <div class="hints">
+        <div class="hint" onclick="sendHint(this)">雪纳瑞容易得什么病？</div>
+        <div class="hint" onclick="sendHint(this)">迷你雪纳瑞的性格特点</div>
+        <div class="hint" onclick="sendHint(this)">雪纳瑞多久洗一次澡？</div>
+        <div class="hint" onclick="sendHint(this)">白内障怎么治疗？</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-wrap">
+      <textarea id="input" rows="1" placeholder="输入你的问题..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="send()">发送</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let sessionId = null;
+let sending = false;
+let authMode = 'login'; // 'login' or 'register'
+
+// ──────────── Auth ────────────
+
+function getToken() { return localStorage.getItem('dogagent_token'); }
+function getUsername() { return localStorage.getItem('dogagent_username'); }
+
+function setAuth(token, username, displayName) {
+  localStorage.setItem('dogagent_token', token);
+  localStorage.setItem('dogagent_username', username);
+  localStorage.setItem('dogagent_display', displayName || username);
+}
+
+function clearAuth() {
+  localStorage.removeItem('dogagent_token');
+  localStorage.removeItem('dogagent_username');
+  localStorage.removeItem('dogagent_display');
+}
+
+function authHeaders() {
+  const token = getToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  return headers;
+}
+
+function showAuthModal() {
+  document.getElementById('authModal').classList.remove('hidden');
+  document.getElementById('authError').textContent = '';
+  document.getElementById('authUsername').value = '';
+  document.getElementById('authPassword').value = '';
+  document.getElementById('authDisplayName').value = '';
+  authMode = 'login';
+  updateAuthUI();
+}
+
+function hideAuthModal() {
+  document.getElementById('authModal').classList.add('hidden');
+}
+
+function toggleAuthMode() {
+  authMode = authMode === 'login' ? 'register' : 'login';
+  updateAuthUI();
+}
+
+function updateAuthUI() {
+  document.getElementById('authError').textContent = '';
+  if (authMode === 'login') {
+    document.getElementById('authTitle').textContent = '🐾 登录';
+    document.getElementById('authSubtitle').textContent = '登录以开始使用 dogAgent';
+    document.getElementById('authBtn').textContent = '登录';
+    document.getElementById('authSwitch').innerHTML = '还没有账号？<a onclick="toggleAuthMode()">注册</a>';
+    document.getElementById('displayNameGroup').style.display = 'none';
+  } else {
+    document.getElementById('authTitle').textContent = '🐾 注册';
+    document.getElementById('authSubtitle').textContent = '创建账号加入 dogAgent';
+    document.getElementById('authBtn').textContent = '注册';
+    document.getElementById('authSwitch').innerHTML = '已有账号？<a onclick="toggleAuthMode()">登录</a>';
+    document.getElementById('displayNameGroup').style.display = 'block';
+  }
+}
+
+async function submitAuth() {
+  const username = document.getElementById('authUsername').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  errEl.textContent = '';
+
+  if (!username || !password) {
+    errEl.textContent = '请填写用户名和密码';
+    return;
+  }
+
+  const btn = document.getElementById('authBtn');
+  btn.disabled = true;
+
+  const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+  const body = { username, password };
+  if (authMode === 'register') {
+    const dn = document.getElementById('authDisplayName').value.trim();
+    if (dn) body.display_name = dn;
+  }
+
+  try {
+    const r = await fetch(API + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+
+    if (r.ok) {
+      setAuth(d.token, d.username, d.display_name);
+      hideAuthModal();
+      onAuthSuccess();
+    } else {
+      errEl.textContent = d.detail || '操作失败';
+    }
+  } catch (e) {
+    errEl.textContent = '网络错误: ' + e.message;
+  }
+
+  btn.disabled = false;
+}
+
+function onAuthSuccess() {
+  const display = localStorage.getItem('dogagent_display') || getUsername();
+  document.getElementById('currentUser').textContent = '👤 ' + display;
+  document.getElementById('logoutBtn').style.display = 'inline-block';
+  document.getElementById('prefsSection').style.display = 'block';
+  sessionId = null;
+  loadSessions();
+  loadPrefs();
+}
+
+function logout() {
+  clearAuth();
+  sessionId = null;
+  document.getElementById('currentUser').textContent = '未登录';
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('sessionList').innerHTML = '';
+  document.getElementById('messages').innerHTML = '';
+  document.getElementById('headerTitle').textContent = '新对话';
+  document.getElementById('prefsSection').style.display = 'none';
+  document.getElementById('prefsList').innerHTML = '';
+  showAuthModal();
+}
+
+function checkAuth() {
+  const token = getToken();
+  if (!token) {
+    showAuthModal();
+    return;
+  }
+  // 验证 token 是否有效
+  fetch(API + '/api/auth/me', { headers: authHeaders() })
+    .then(r => {
+      if (r.ok) return r.json();
+      throw new Error('invalid');
+    })
+    .then(d => {
+      localStorage.setItem('dogagent_display', d.display_name || d.username);
+      onAuthSuccess();
+    })
+    .catch(() => {
+      clearAuth();
+      showAuthModal();
+    });
+}
+
+// Enter key in auth inputs
+document.getElementById('authPassword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitAuth();
+});
+document.getElementById('authUsername').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('authPassword').focus();
+});
+
+// ──────────── Preferences ────────────
+
+function togglePrefsPanel() {
+  const body = document.getElementById('prefsBody');
+  const toggle = document.getElementById('prefsToggle');
+  body.classList.toggle('open');
+  toggle.classList.toggle('open');
+}
+
+async function loadPrefs() {
+  try {
+    const r = await fetch(`${API}/api/preferences`, { headers: authHeaders() });
+    if (!r.ok) return;
+    const d = await r.json();
+    renderPrefs(d.preferences || []);
+  } catch(e) { console.error('loadPrefs:', e); }
+}
+
+function renderPrefs(prefs) {
+  const list = document.getElementById('prefsList');
+  if (!prefs.length) {
+    list.innerHTML = '<div class="pref-empty">暂无记忆偏好</div>';
+    return;
+  }
+  list.innerHTML = prefs.map(p =>
+    `<div class="pref-item">${p.content}</div>`
+  ).join('');
+}
+
+async function addPref() {
+  const input = document.getElementById('prefInput');
+  const content = input.value.trim();
+  if (!content) return;
+  try {
+    const r = await fetch(`${API}/api/preferences`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ content }),
+    });
+    if (r.ok) {
+      input.value = '';
+      loadPrefs();
+    }
+  } catch(e) { console.error('addPref:', e); }
+}
+
+// Enter key in pref input
+document.getElementById('prefInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addPref();
+});
+
+// ──────────── Session ────────────
+
+async function loadSessions() {
+  try {
+    const r = await fetch(`${API}/api/sessions`, { headers: authHeaders() });
+    if (r.status === 401) { showAuthModal(); return; }
+    const d = await r.json();
+    const list = document.getElementById('sessionList');
+    list.innerHTML = '';
+    (d.sessions || []).forEach(s => {
+      const el = document.createElement('div');
+      el.className = 'session-item' + (s.id === sessionId ? ' active' : '');
+
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'session-title';
+      titleSpan.textContent = s.title || '未命名对话';
+      titleSpan.onclick = () => switchSession(s.id, s.title);
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'del-btn';
+      delBtn.textContent = '×';
+      delBtn.title = '删除会话';
+      delBtn.onclick = (e) => { e.stopPropagation(); deleteSession(s.id); };
+
+      el.appendChild(titleSpan);
+      el.appendChild(delBtn);
+      list.appendChild(el);
+    });
+  } catch(e) { console.error('loadSessions:', e); }
+}
+
+async function newSession() {
+  if (!getToken()) { showAuthModal(); return; }
+  try {
+    const r = await fetch(`${API}/api/sessions`, { method:'POST', headers: authHeaders() });
+    if (r.status === 401) { showAuthModal(); return; }
+    const d = await r.json();
+    sessionId = d.session_id;
+    document.getElementById('messages').innerHTML = '<div class="welcome" id="welcome"><h2>🐾 你好！我是小雪</h2><p>专业的雪纳瑞养护知识助手，有什么可以帮你的？</p><div class="hints"><div class="hint" onclick="sendHint(this)">雪纳瑞容易得什么病？</div><div class="hint" onclick="sendHint(this)">迷你雪纳瑞的性格特点</div><div class="hint" onclick="sendHint(this)">雪纳瑞多久洗一次澡？</div><div class="hint" onclick="sendHint(this)">白内障怎么治疗？</div></div></div>';
+    document.getElementById('headerTitle').textContent = '新对话';
+    loadSessions();
+  } catch(e) { console.error('newSession:', e); }
+}
+
+async function deleteSession(id) {
+  if (!confirm('确认删除此会话？')) return;
+  try {
+    const r = await fetch(`${API}/api/sessions/${id}`, { method: 'DELETE', headers: authHeaders() });
+    if (r.ok) {
+      if (sessionId === id) {
+        sessionId = null;
+        document.getElementById('messages').innerHTML = '';
+        document.getElementById('headerTitle').textContent = '新对话';
+      }
+      loadSessions();
+    }
+  } catch(e) { console.error('deleteSession:', e); }
+}
+
+async function switchSession(id, title) {
+  sessionId = id;
+  document.getElementById('headerTitle').textContent = title || '对话';
+  loadSessions();
+  const msgEl = document.getElementById('messages');
+  msgEl.innerHTML = '';
+  try {
+    const r = await fetch(`${API}/api/sessions/${id}/messages`, { headers: authHeaders() });
+    if (r.status === 401) { showAuthModal(); return; }
+    const d = await r.json();
+    (d.messages || []).forEach(m => {
+      if (m.role === 'summary') {
+        appendSummary(m.content);
+      } else {
+        appendMessage(m.role === 'user' ? 'user' : 'bot', m.content);
+      }
+    });
+  } catch(e) { console.error('switchSession:', e); }
+}
+
+// ──────────── Chat ────────────
+
+function sendHint(el) {
+  document.getElementById('input').value = el.textContent;
+  send();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+async function send() {
+  if (!getToken()) { showAuthModal(); return; }
+
+  const input = document.getElementById('input');
+  const msg = input.value.trim();
+  if (!msg || sending) return;
+
+  const w = document.getElementById('welcome');
+  if (w) w.remove();
+
+  appendMessage('user', msg);
+  input.value = '';
+  input.style.height = 'auto';
+
+  sending = true;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('headerStatus').textContent = '思考中...';
+
+  const typingEl = showTyping();
+
+  try {
+    const body = { message: msg };
+    if (sessionId) body.session_id = sessionId;
+
+    const r = await fetch(`${API}/api/chat`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body)
+    });
+
+    if (r.status === 401) {
+      typingEl.remove();
+      showAuthModal();
+      sending = false;
+      document.getElementById('sendBtn').disabled = false;
+      return;
+    }
+
+    const d = await r.json();
+    typingEl.remove();
+
+    if (r.ok) {
+      sessionId = d.session_id;
+      appendMessage('bot', d.answer, d.sources);
+      loadSessions();
+    } else {
+      appendMessage('bot', '❌ 错误: ' + (d.detail || '未知错误'));
+    }
+  } catch(e) {
+    typingEl.remove();
+    appendMessage('bot', '❌ 网络错误: ' + e.message);
+  }
+
+  sending = false;
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('headerStatus').textContent = '就绪';
+}
+
+function appendSummary(content) {
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'summary-card';
+  div.innerHTML = '<div class="summary-label">📋 历史摘要</div>' + content.replace(/\n/g, '<br>');
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendMessage(role, content, sources) {
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'message ' + role;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.textContent = role === 'user' ? '🧑' : '🐶';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+
+  if (role === 'bot' && typeof marked !== 'undefined') {
+    bubble.innerHTML = marked.parse(content);
+  } else {
+    bubble.textContent = content;
+  }
+
+  if (sources && sources.length) {
+    const srcDiv = document.createElement('div');
+    srcDiv.className = 'sources';
+    srcDiv.innerHTML = '📚 ' + sources.map(s => '<span>' + s + '</span>').join('');
+    bubble.appendChild(srcDiv);
+  }
+
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping() {
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'message bot';
+  div.innerHTML = '<div class="avatar">🐶</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>';
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+// ──────────── Init ────────────
+checkAuth();
+</script>
+</body>
+</html>
