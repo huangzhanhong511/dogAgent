@@ -23,11 +23,14 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(PROJECT_DIR, ".env"))
 
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import FastAPI, HTTPException, Depends, Header, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from typing import Optional
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from api.models import (
     ChatRequest,
@@ -47,6 +50,7 @@ from api.models import (
     UserInfo,
 )
 from api.auth import AuthService, set_auth_service, get_current_user
+from api.a2a import a2a_app, setup_a2a
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("api")
@@ -57,20 +61,24 @@ _retriever = None
 _memory = None
 _auth = None
 _bg_tasks = None
+_judge = None
+_staging = None
+_a2a_tool = None
 
 
 def _init_components():
-    """初始化 LLM / Retriever / Memory / Auth / BackgroundTasks（懒加载单例）"""
-    global _llm, _retriever, _memory, _auth, _bg_tasks
+    """初始化 LLM / Retriever / Memory / Auth / BackgroundTasks / Staging（懒加载单例）"""
+    global _llm, _retriever, _memory, _auth, _bg_tasks, _judge, _staging, _a2a_tool
 
-    from agent.chat import create_llm, create_retriever, create_memory_system
+    from agent.chat import create_retriever, create_memory_system
+    from agent.llm import create_main_llm
 
     if _llm is None:
-        _llm = create_llm()
+        _llm = create_main_llm()
         logger.info("LLM 已初始化")
 
     if _retriever is None:
-        _retriever = create_retriever(llm=_llm)  # 传入 LLM 启用 Karpathy 风格检索
+        _retriever = create_retriever(llm=_llm)
         logger.info(f"Retriever 已初始化，索引条目数: {len(_retriever.index) if _retriever.index else 0}")
 
     if _memory is None:
@@ -94,11 +102,81 @@ def _init_components():
         _bg_tasks = BackgroundTaskManager()
         logger.info("后台任务管理器已初始化")
 
+    # 初始化 judge（使用 qwen-max，与主 LLM 共用实例）
+    if _judge is None:
+        from agent.judge import ResponseJudge
+        _judge = ResponseJudge(_llm)
+        logger.info("ResponseJudge 已初始化（qwen-max）")
+
+    # 初始化 staging 暂存层 + 后台超时 promote 线程
+    if _staging is None and _memory is not None:
+        from agent.staging import StagingStore
+        import threading
+        _staging = StagingStore(_memory["db"], _memory["conv_store"])
+        t = threading.Thread(target=_staging_drain_loop, daemon=True)
+        t.start()
+        logger.info("StagingStore 已初始化，超时 promote 线程已启动")
+
     # 初始化认证服务
     if _auth is None and _memory is not None:
         _auth = AuthService(_memory["db"])
         set_auth_service(_auth)
         logger.info("认证服务已初始化")
+
+    # 注入 A2A 共享状态
+    if _llm is not None and _retriever is not None:
+        setup_a2a(_llm, _retriever)
+        logger.info("A2A endpoint 已配置")
+
+    # 初始化 A2A 客户端工具（若配置了外部 agent）
+    if _a2a_tool is None:
+        a2a_agent_url = os.getenv("A2A_AGENT_URL", "").strip()
+        if a2a_agent_url:
+            from agent.a2a_client import create_a2a_tool
+            _a2a_tool = create_a2a_tool(a2a_agent_url)
+            logger.info(f"A2A 客户端工具已注册，目标: {a2a_agent_url}（懒加载，首次调用时连接）")
+
+
+def _staging_drain_loop():
+    """后台线程：每5分钟扫描 staging，将超过 30 分钟的轮次强制 promote 到持久层。"""
+    import time
+    while True:
+        time.sleep(300)
+        if not _staging or not _memory:
+            continue
+        try:
+            expired = _staging.get_expired()
+            for turn in expired:
+                _staging.promote_turn(
+                    turn["user_id"], turn["session_id"],
+                    turn["turn_index"], _memory["conv_store"],
+                )
+                if _bg_tasks:
+                    _bg_tasks.submit_preference_extract(
+                        _llm, _memory["user_prefs"],
+                        turn["user_id"], turn["session_id"],
+                        turn["user_content"], turn["assistant_content"],
+                    )
+                    _bg_tasks.submit_compaction(
+                        _memory.get("compaction"),
+                        turn["user_id"], turn["session_id"],
+                    )
+        except Exception as e:
+            logger.warning(f"Staging drain loop error: {e}")
+
+
+def _evaluate_staging(user_id: str, session_id: str, current_user_input: str):
+    """对 staging 中所有轮次做 batch judge，SKIP 的立即删除，STORE 的继续留在 staging。"""
+    if not _staging or not _judge:
+        return
+    turns = _staging.get_turns(user_id, session_id)
+    if not turns:
+        return
+    verdicts = _judge.batch_judge(turns, follow_up=current_user_input)
+    for turn, store in zip(turns, verdicts):
+        if not store:
+            _staging.delete_turn(user_id, session_id, turn["turn_index"])
+            logger.info(f"Staging SKIP: session={session_id} turn={turn['turn_index']} q={turn['user_content'][:30]!r}")
 
 
 @asynccontextmanager
@@ -119,6 +197,9 @@ app = FastAPI(
 WEB_DIR = os.path.join(PROJECT_DIR, "web")
 if os.path.isdir(WEB_DIR):
     app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
+
+# A2A 子应用
+app.mount("/a2a", a2a_app)
 
 
 # ──────────────────────────────────────────────
@@ -229,13 +310,14 @@ async def health():
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest, user: dict = Depends(get_user_from_header)):
     """核心对话接口（需认证）"""
+    import time
     from agent.chat import (
         SYSTEM_PROMPT,
-        CONTEXT_TEMPLATE,
         build_memory_context,
         build_messages,
         create_memory_expand_tool,
         create_web_search_tool,
+        create_image_search_tool,
         invoke_with_tools,
     )
     from langchain_core.messages import HumanMessage
@@ -243,9 +325,12 @@ async def chat(req: ChatRequest, user: dict = Depends(get_user_from_header)):
     if not _llm or not _retriever:
         raise HTTPException(status_code=503, detail="服务未就绪，LLM 或 Retriever 未初始化")
 
+    t0 = time.perf_counter()
+
     user_id = user["user_id"]
     session_id = req.session_id
     user_input = req.message.strip()
+    image_base64 = req.image_base64
 
     if not user_input:
         raise HTTPException(status_code=400, detail="消息不能为空")
@@ -255,72 +340,136 @@ async def chat(req: ChatRequest, user: dict = Depends(get_user_from_header)):
         if not session_id:
             session_id = _memory["session_mgr"].ensure_session(user_id)
         else:
-            # 验证 session 存在且属于该用户
             s = _memory["session_mgr"].get_session(session_id)
             if not s or s.get("user_id") != user_id:
                 session_id = _memory["session_mgr"].ensure_session(user_id)
     else:
         session_id = session_id or "no-memory"
 
-    # 1. 查询重写
+    # 1. Query rewrite
     rewritten_query = user_input
     recent_msgs = []
     if _memory and session_id != "no-memory":
         recent_msgs = _memory["conv_store"].get_recent(user_id, session_id, limit=10)
         if _memory.get("query_rewriter"):
             rewritten_query = _memory["query_rewriter"].rewrite(user_input, recent_msgs)
+    t1 = time.perf_counter()
+    logger.info(f"[timing] query_rewrite={t1-t0:.3f}s")
 
-    # 2. Wiki 检索
-    results = _retriever.retrieve(rewritten_query, top_k=3)
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+
+    async def _run_parallel_preprocess():
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            staging_fut = loop.run_in_executor(
+                pool, _evaluate_staging, user_id, session_id, user_input
+            ) if (_staging and _memory and session_id != "no-memory") else asyncio.sleep(0)
+            wiki_fut = loop.run_in_executor(
+                pool, _retriever.retrieve, rewritten_query, 3
+            )
+            _, wiki_results = await asyncio.gather(staging_fut, wiki_fut)
+        return wiki_results
+
+    results = await _run_parallel_preprocess()
     wiki_context = _retriever.format_context(results)
     sources = [r.title for r in results]
+    t2 = time.perf_counter()
+    logger.info(f"[timing] parallel(staging_judge + wiki_retrieval)={t2-t1:.3f}s")
+
+    # 2.5 购物意图检测 → 强制执行 PDD 搜索，结果注入 context
+    PDD_INTENT_KEYWORDS = ["在哪买", "哪里买", "怎么买", "购买", "推荐买", "多少钱", "价格",
+                           "拼多多", "pdd", "搜", "找", "哪款", "选购", "入手",
+                           "推荐狗粮", "推荐食品", "推荐零食", "品牌推荐", "哪个品牌"]
+    query_lower = user_input.lower()
+    pdd_context = ""
+    if any(kw in query_lower for kw in PDD_INTENT_KEYWORDS):
+        try:
+            from agent.pdd_tool import create_pdd_search_tool
+            import re
+            keyword = re.sub(r"(帮我|我想|请|在拼多多|在pdd上?|搜索?|找|推荐|买|购买|多少钱|价格|哪里|哪款|\d+个)", "", user_input).strip()
+            if not keyword:
+                keyword = rewritten_query
+            pdd_tool_fn = create_pdd_search_tool()
+            pdd_result = pdd_tool_fn.invoke({"keyword": keyword, "sort_type": 0})
+            if pdd_result and ("拼多多搜索结果" in pdd_result or "拼多多推荐结果" in pdd_result):
+                pdd_context = f"\n\n【拼多多实时搜索结果 — 以下数据来自 PDD API，必须原文展示给用户，不得改写或替换任何链接】\n{pdd_result}"
+                logger.info(f"PDD 强制搜索完成，关键词: {keyword}")
+        except Exception as e:
+            logger.warning(f"PDD 强制搜索失败: {e}")
+    t3 = time.perf_counter()
+    logger.info(f"[timing] pdd_forced_search={t3-t2:.3f}s  (skipped={not pdd_context})")
 
     # 3. 记忆上下文
     memory_context = ""
     if _memory and session_id != "no-memory":
         memory_context = build_memory_context(_memory, user_id, session_id)
 
-    # 4. 组装消息 + 调用 LLM
-    # fresh tail 消息从 context_items 取，与摘要保持同一视图
+    # 4. 组装消息：持久层 tail + staging 暂存消息（staging 排最后，最近发生）
     if _memory and session_id != "no-memory":
         tail_msgs = _memory["summary_dag"].get_context_messages(user_id, session_id)
+        if _staging:
+            tail_msgs = tail_msgs + _staging.get_messages(user_id, session_id)
     else:
         tail_msgs = recent_msgs[-6:] if recent_msgs else []
-    messages = build_messages(SYSTEM_PROMPT, memory_context, wiki_context, tail_msgs, user_input)
+    messages = build_messages(SYSTEM_PROMPT, memory_context, wiki_context + pdd_context, tail_msgs, user_input)
+    t4 = time.perf_counter()
+    logger.info(f"[timing] memory_ctx + msg_assembly={t4-t3:.3f}s")
+
+    # 如果用户上传了图片，替换最后一条 HumanMessage 为多模态格式
+    if image_base64:
+        messages = messages[:-1]
+        messages.append(
+            HumanMessage(
+                content=[
+                    {"type": "image_url", "image_url": {"url": image_base64}},
+                    {"type": "text", "text": user_input},
+                ]
+            )
+        )
 
     try:
+        # 有图片时切换到视觉模型
+        active_llm = _llm
+        if image_base64:
+            try:
+                from agent.llm import create_vision_llm
+                active_llm = create_vision_llm()
+            except Exception as e:
+                logger.warning(f"视觉模型初始化失败，降级到普通 LLM: {e}")
+
         search_tool = create_web_search_tool()
+        img_tool = create_image_search_tool()
+        from agent.pdd_tool import create_pdd_search_tool
+        pdd_tool = create_pdd_search_tool()
+        extra_tools = [_a2a_tool] if _a2a_tool else []
         if _memory and session_id != "no-memory":
             expand_tool = create_memory_expand_tool(_memory, user_id)
-            answer = invoke_with_tools(_llm, messages, [expand_tool, search_tool])
+            answer, images = invoke_with_tools(active_llm, messages, [expand_tool, search_tool, img_tool, pdd_tool] + extra_tools)
         else:
-            answer = invoke_with_tools(_llm, messages, [search_tool])
+            answer, images = invoke_with_tools(active_llm, messages, [search_tool, img_tool, pdd_tool] + extra_tools)
     except Exception as e:
         logger.error(f"LLM 调用失败: {e}")
         raise HTTPException(status_code=500, detail=f"LLM 调用失败: {e}")
+    t5 = time.perf_counter()
+    logger.info(f"[timing] main_llm(react_agent)={t5-t4:.3f}s")
 
-    # 5. 保存到记忆
-    if _memory and session_id != "no-memory":
-        _memory["conv_store"].add_message(user_id, session_id, "user", user_input)
-        _memory["conv_store"].add_message(user_id, session_id, "assistant", answer)
+    # 5. 写入 staging
+    if _staging and _memory and session_id != "no-memory":
+        _staging.add_turn(user_id, session_id, user_input, answer)
         _memory["session_mgr"].touch_session(session_id)
-
-        # 后台任务（不阻塞 API 响应）
         if _bg_tasks:
-            _bg_tasks.submit_preference_extract(
-                _llm, _memory["user_prefs"], user_id, session_id, user_input, answer
-            )
-            _bg_tasks.submit_compaction(
-                _memory.get("compaction"), user_id, session_id
-            )
             _bg_tasks.submit_title_generate(
                 _llm, _memory["session_mgr"], session_id
             )
+
+    logger.info(f"[timing] total={time.perf_counter()-t0:.3f}s  session={session_id[:8]}")
 
     return ChatResponse(
         answer=answer,
         session_id=session_id,
         sources=sources,
+        images=images,
         rewritten_query=rewritten_query if rewritten_query != user_input else None,
     )
 
@@ -376,7 +525,19 @@ async def get_messages(
     if not s or s.get("user_id") != user_id:
         raise HTTPException(status_code=403, detail="无权访问该会话")
 
-    # 从 context_items 取当前视图（摘要 + 消息，按 ordinal 顺序）
+    # 查看历史前先 drain staging，确保用户看到完整历史
+    if _staging:
+        try:
+            _staging.drain_session(
+                user_id, session_id, _memory["conv_store"],
+                bg_tasks=_bg_tasks, llm=_llm,
+                user_prefs=_memory["user_prefs"],
+                compaction=_memory.get("compaction"),
+            )
+        except Exception as e:
+            logger.warning(f"Staging drain on messages view failed: {e}")
+
+    # 从 context_items 取当前视图（摘要 + 消息，按 ordinal 顺序），截取最近 limit 条
     items = _memory["summary_dag"].get_context_items(user_id, session_id)
     msgs = []
     for item in items:
@@ -406,7 +567,7 @@ async def get_messages(
                     content=row["content"],
                     created_at=str(row["created_at"] or ""),
                 ))
-    return MessagesResponse(session_id=session_id, messages=msgs)
+    return MessagesResponse(session_id=session_id, messages=msgs[-limit:])
 
 
 @app.delete("/api/sessions/{session_id}")

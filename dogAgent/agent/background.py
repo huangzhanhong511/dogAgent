@@ -6,8 +6,8 @@ dogAgent 后台任务管理器
 - DAG 压缩（摘要压缩检查）
 - 会话标题生成
 
-使用 ThreadPoolExecutor 线程池，不阻塞用户等待。
-所有任务都是 I/O 密集型（等 LLM API），线程池适合。
+REDIS_URL 已设置 → Celery 模式：任务写入 Redis 队列，Worker 异步消费，重启不丢任务
+REDIS_URL 未设置 → 线程池模式：进程内执行，适合本地开发
 """
 
 import os
@@ -20,6 +20,8 @@ logger = logging.getLogger("background")
 # 默认配置
 DEFAULT_MAX_WORKERS = 4
 MAX_QUEUE_SIZE = 100
+
+_REDIS_URL = os.environ.get("REDIS_URL")
 
 
 class BackgroundTaskManager:
@@ -40,40 +42,46 @@ class BackgroundTaskManager:
     """
 
     def __init__(self, max_workers: int = None):
-        workers = max_workers or int(os.environ.get("BG_MAX_WORKERS", str(DEFAULT_MAX_WORKERS)))
-        self._executor = ThreadPoolExecutor(
-            max_workers=workers,
-            thread_name_prefix="bg-task",
-        )
-        self._pending: list[Future] = []
-        logger.info(f"后台任务管理器已启动: max_workers={workers}")
+        self._use_celery = bool(_REDIS_URL)
+        if self._use_celery:
+            logger.info("后台任务管理器已启动: Celery 模式 (Redis 队列，重启不丢任务)")
+        else:
+            workers = max_workers or int(os.environ.get("BG_MAX_WORKERS", str(DEFAULT_MAX_WORKERS)))
+            self._executor = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="bg-task")
+            self._pending: list[Future] = []
+            logger.info(f"后台任务管理器已启动: 线程池模式 (max_workers={workers})")
 
     def submit_preference_extract(self, llm, user_prefs, user_id: str,
-                                   session_id: str, user_input: str, answer: str) -> Future | None:
-        """提交偏好提取任务（LLM 自动从对话中提取用户偏好）"""
-        return self._submit(
-            self._run_preference_extract,
-            llm, user_prefs, user_id, session_id, user_input, answer,
-        )
+                                   session_id: str, user_input: str, answer: str) -> None:
+        """提交偏好提取任务"""
+        if self._use_celery:
+            from agent.tasks import task_preference_extract
+            task_preference_extract.delay(user_id, session_id, user_input, answer)
+        else:
+            self._submit(self._run_preference_extract, llm, user_prefs, user_id, session_id, user_input, answer)
 
-    def submit_compaction(self, compaction_engine, user_id: str, session_id: str) -> Future | None:
+    def submit_compaction(self, compaction_engine, user_id: str, session_id: str) -> None:
         """提交 DAG 压缩任务"""
         if compaction_engine is None:
-            return None
-        return self._submit(
-            self._run_compaction,
-            compaction_engine, user_id, session_id,
-        )
+            return
+        if self._use_celery:
+            from agent.tasks import task_compaction
+            task_compaction.delay(user_id, session_id)
+        else:
+            self._submit(self._run_compaction, compaction_engine, user_id, session_id)
 
-    def submit_title_generate(self, llm, session_mgr, session_id: str) -> Future | None:
+    def submit_title_generate(self, llm, session_mgr, session_id: str) -> None:
         """提交会话标题生成任务"""
-        return self._submit(
-            self._run_title_generate,
-            llm, session_mgr, session_id,
-        )
+        if self._use_celery:
+            from agent.tasks import task_title_generate
+            task_title_generate.delay(session_id)
+        else:
+            self._submit(self._run_title_generate, llm, session_mgr, session_id)
 
     def wait_all(self, timeout: float = 30):
-        """等待所有挂起任务完成（用于测试 / 优雅关闭）"""
+        """等待所有挂起任务完成（线程池模式下有效）"""
+        if self._use_celery:
+            return
         done = []
         for f in self._pending:
             try:
@@ -84,22 +92,20 @@ class BackgroundTaskManager:
         self._pending = [f for f in self._pending if f not in done]
 
     def shutdown(self):
-        """关闭线程池"""
+        """关闭任务管理器"""
+        if self._use_celery:
+            return
         self.wait_all(timeout=10)
         self._executor.shutdown(wait=False, cancel_futures=True)
         logger.info("后台任务管理器已关闭")
 
-    # ─── 内部方法 ───
+    # ─── 内部方法（线程池模式） ───
 
     def _submit(self, fn, *args) -> Future | None:
-        """提交任务到线程池（带队列溢出保护）"""
-        # 清理已完成的 future
         self._pending = [f for f in self._pending if not f.done()]
-
         if len(self._pending) >= MAX_QUEUE_SIZE:
             logger.warning(f"后台任务队列已满({MAX_QUEUE_SIZE})，跳过")
             return None
-
         future = self._executor.submit(fn, *args)
         self._pending.append(future)
         return future

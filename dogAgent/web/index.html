@@ -55,6 +55,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .message.bot .bubble ul,.message.bot .bubble ol{padding-left:20px;margin:8px 0}
 .sources{margin-top:8px;font-size:11px;color:var(--text-light)}
 .sources span{background:#f0f0f0;padding:2px 8px;border-radius:10px;margin-right:4px}
+.image-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;max-width:480px}
+.image-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;transition:opacity .2s}
+.image-grid img:hover{opacity:.85}
+.image-lightbox{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:2000;cursor:pointer}
+.image-lightbox img{max-width:90vw;max-height:90vh;border-radius:12px;object-fit:contain}
 
 /* Typing */
 .typing{display:flex;gap:4px;padding:8px 16px}
@@ -64,12 +69,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 
 /* Input */
 .input-area{padding:16px 24px;background:#fff;border-top:1px solid var(--border)}
-.input-wrap{display:flex;gap:8px;max-width:800px;margin:0 auto}
+.input-wrap{display:flex;gap:8px;max-width:800px;margin:0 auto;flex-direction:column}
+.input-row{display:flex;gap:8px;align-items:flex-end}
 .input-wrap textarea{flex:1;padding:12px 16px;border:1px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:none;outline:none;max-height:120px;line-height:1.5;transition:border-color .2s}
 .input-wrap textarea:focus{border-color:var(--primary)}
 .send-btn{padding:0 20px;background:var(--primary);color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:16px;transition:background .2s;align-self:flex-end;height:44px}
 .send-btn:hover{background:#3a7bc8}
 .send-btn:disabled{background:#ccc;cursor:not-allowed}
+.img-btn{width:44px;height:44px;background:transparent;border:1px solid var(--border);border-radius:12px;cursor:pointer;font-size:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:border-color .2s}
+.img-btn:hover{border-color:var(--primary)}
+.img-preview-wrap{display:none;align-items:center;gap:8px;padding:6px 0}
+.img-preview-wrap.active{display:flex}
+.img-preview-wrap img{height:60px;border-radius:8px;object-fit:cover}
+.img-preview-wrap .remove-img{cursor:pointer;color:#999;font-size:18px;line-height:1}
+.bubble img{max-width:100%;border-radius:8px;margin:4px 0;display:block}
 
 /* Welcome */
 .welcome{text-align:center;padding:60px 20px;color:var(--text-light)}
@@ -208,8 +221,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 
   <div class="input-area">
     <div class="input-wrap">
-      <textarea id="input" rows="1" placeholder="输入你的问题..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-      <button class="send-btn" id="sendBtn" onclick="send()">发送</button>
+      <div class="img-preview-wrap" id="imgPreviewWrap">
+        <img id="imgPreviewThumb" src="" alt="preview">
+        <span class="remove-img" onclick="clearPendingImage()" title="移除图片">✕</span>
+      </div>
+      <div class="input-row">
+        <button class="img-btn" onclick="document.getElementById('imgFileInput').click()" title="上传图片 / 粘贴图片">🖼</button>
+        <input type="file" id="imgFileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
+        <textarea id="input" rows="1" placeholder="输入你的问题...（可粘贴图片）" onkeydown="handleKey(event)" oninput="autoResize(this)" onpaste="handlePaste(event)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="send()">发送</button>
+      </div>
     </div>
   </div>
 </div>
@@ -219,6 +240,47 @@ const API = '';
 let sessionId = null;
 let sending = false;
 let authMode = 'login'; // 'login' or 'register'
+let pendingImage = null; // base64 string with data: prefix
+
+// ──────────── Image handling ────────────
+
+function setPendingImage(base64) {
+  pendingImage = base64;
+  const wrap = document.getElementById('imgPreviewWrap');
+  const thumb = document.getElementById('imgPreviewThumb');
+  thumb.src = base64;
+  wrap.classList.add('active');
+}
+
+function clearPendingImage() {
+  pendingImage = null;
+  document.getElementById('imgPreviewWrap').classList.remove('active');
+  document.getElementById('imgPreviewThumb').src = '';
+  document.getElementById('imgFileInput').value = '';
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => setPendingImage(e.target.result);
+  reader.readAsDataURL(file);
+}
+
+function handlePaste(event) {
+  const items = event.clipboardData && event.clipboardData.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      event.preventDefault();
+      const blob = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = e => setPendingImage(e.target.result);
+      reader.readAsDataURL(blob);
+      return;
+    }
+  }
+}
 
 // ──────────── Auth ────────────
 
@@ -527,14 +589,17 @@ async function send() {
 
   const input = document.getElementById('input');
   const msg = input.value.trim();
-  if (!msg || sending) return;
+  if (!msg && !pendingImage || sending) return;
+  if (!msg) msg = '（图片）';
 
   const w = document.getElementById('welcome');
   if (w) w.remove();
 
-  appendMessage('user', msg);
+  const imgToSend = pendingImage;
+  appendMessage('user', msg, null, imgToSend);
   input.value = '';
   input.style.height = 'auto';
+  clearPendingImage();
 
   sending = true;
   document.getElementById('sendBtn').disabled = true;
@@ -545,6 +610,7 @@ async function send() {
   try {
     const body = { message: msg };
     if (sessionId) body.session_id = sessionId;
+    if (imgToSend) body.image_base64 = imgToSend;
 
     const r = await fetch(`${API}/api/chat`, {
       method: 'POST',
@@ -565,7 +631,7 @@ async function send() {
 
     if (r.ok) {
       sessionId = d.session_id;
-      appendMessage('bot', d.answer, d.sources);
+      appendMessage('bot', d.answer, d.sources, null, d.images);
       loadSessions();
     } else {
       appendMessage('bot', '❌ 错误: ' + (d.detail || '未知错误'));
@@ -589,7 +655,7 @@ function appendSummary(content) {
   container.scrollTop = container.scrollHeight;
 }
 
-function appendMessage(role, content, sources) {
+function appendMessage(role, content, sources, imageBase64, images) {
   const container = document.getElementById('messages');
   const div = document.createElement('div');
   div.className = 'message ' + role;
@@ -601,10 +667,36 @@ function appendMessage(role, content, sources) {
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
 
+  // Show attached image in user bubble
+  if (imageBase64) {
+    const img = document.createElement('img');
+    img.src = imageBase64;
+    img.style.maxHeight = '200px';
+    bubble.appendChild(img);
+  }
+
   if (role === 'bot' && typeof marked !== 'undefined') {
-    bubble.innerHTML = marked.parse(content);
+    const textDiv = document.createElement('div');
+    textDiv.innerHTML = marked.parse(content);
+    bubble.appendChild(textDiv);
   } else {
-    bubble.textContent = content;
+    const textNode = document.createTextNode(content);
+    bubble.appendChild(textNode);
+  }
+
+  // Image grid (Perplexity style) — shown below text for bot messages
+  if (images && images.length) {
+    const grid = document.createElement('div');
+    grid.className = 'image-grid';
+    images.forEach(url => {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = '搜索结果图片';
+      img.onerror = () => img.parentElement && img.parentElement.removeChild(img);
+      img.onclick = () => showLightbox(url);
+      grid.appendChild(img);
+    });
+    bubble.appendChild(grid);
   }
 
   if (sources && sources.length) {
@@ -618,6 +710,14 @@ function appendMessage(role, content, sources) {
   div.appendChild(bubble);
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
+}
+
+function showLightbox(url) {
+  const lb = document.createElement('div');
+  lb.className = 'image-lightbox';
+  lb.innerHTML = `<img src="${url}" alt="图片">`;
+  lb.onclick = () => document.body.removeChild(lb);
+  document.body.appendChild(lb);
 }
 
 function showTyping() {

@@ -17,37 +17,96 @@ import logging
 logger = logging.getLogger("llm")
 
 CHAT_MODEL = os.environ.get("CHAT_MODEL", "qwen-plus")
+MAIN_CHAT_MODEL = os.environ.get("MAIN_CHAT_MODEL", CHAT_MODEL)
 
 
 def create_llm(temperature: float = 0.3, max_tokens: int = 2048):
-    """
-    创建 LLM 实例。
+    """轻量任务用 LLM（query rewrite、标题生成、偏好提取等）"""
+    return _build_llm(CHAT_MODEL, temperature, max_tokens)
 
-    根据 LLM_PROVIDER 环境变量选择后端:
-      - qwen:   QWEN_API_KEY + DashScope
-      - openai:  OPENAI_API_KEY + OPENAI_API_BASE
-    """
+
+def create_main_llm(temperature: float = 0.3, max_tokens: int = 4096):
+    """主对话 LLM，使用 MAIN_CHAT_MODEL（默认 qwen-max，工具调用更可靠）"""
+    return _build_llm(MAIN_CHAT_MODEL, temperature, max_tokens)
+
+
+def _build_llm(model: str, temperature: float, max_tokens: int):
+    """内部：根据 model 名创建 LLM 实例"""
     from langchain_openai import ChatOpenAI
 
     llm_provider = os.environ.get("LLM_PROVIDER", "qwen").lower()
 
     if llm_provider == "qwen":
         llm = ChatOpenAI(
-            model=CHAT_MODEL or "qwen-plus",
+            model=model or "qwen-plus",
             temperature=temperature,
             max_tokens=max_tokens,
             openai_api_key=os.environ.get("QWEN_API_KEY") or os.environ.get("OPENAI_API_KEY"),
             openai_api_base=os.environ.get("QWEN_API_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
         )
-        logger.info(f"LLM: Qwen / {CHAT_MODEL}")
+        logger.info(f"LLM: Qwen / {model}")
     else:
         llm = ChatOpenAI(
-            model=CHAT_MODEL,
+            model=model,
             temperature=temperature,
             max_tokens=max_tokens,
             openai_api_key=os.environ.get("OPENAI_API_KEY"),
             openai_api_base=os.environ.get("OPENAI_API_BASE"),
         )
-        logger.info(f"LLM: OpenAI / {CHAT_MODEL}")
+        logger.info(f"LLM: OpenAI / {model}")
+
+    return llm
+
+
+def create_embeddings():
+    """文章向量化用 embedding 模型（text-embedding-v3 via DashScope）"""
+    from langchain_openai import OpenAIEmbeddings
+
+    llm_provider = os.environ.get("LLM_PROVIDER", "qwen").lower()
+
+    if llm_provider == "qwen":
+        return OpenAIEmbeddings(
+            model="text-embedding-v3",
+            openai_api_key=os.environ.get("QWEN_API_KEY") or os.environ.get("OPENAI_API_KEY"),
+            openai_api_base=os.environ.get("QWEN_API_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+        )
+    return OpenAIEmbeddings(
+        model="text-embedding-3-small",
+        openai_api_key=os.environ.get("OPENAI_API_KEY"),
+    )
+
+
+def create_vision_llm(temperature: float = 0.3, max_tokens: int = 2048):
+    """
+    创建视觉 LLM 实例（用于分析用户上传的图片）。
+
+    Qwen: qwen-vl-plus（支持图片输入）
+    OpenAI: gpt-4o（原生多模态）
+    """
+    from langchain_openai import ChatOpenAI
+
+    llm_provider = os.environ.get("LLM_PROVIDER", "qwen").lower()
+    vision_model = os.environ.get("VISION_MODEL")
+
+    if llm_provider == "qwen":
+        model = vision_model or "qwen-vl-plus"
+        llm = ChatOpenAI(
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            openai_api_key=os.environ.get("QWEN_API_KEY") or os.environ.get("OPENAI_API_KEY"),
+            openai_api_base=os.environ.get("QWEN_API_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+        )
+        logger.info(f"Vision LLM: Qwen / {model}")
+    else:
+        model = vision_model or "gpt-4o"
+        llm = ChatOpenAI(
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            openai_api_key=os.environ.get("OPENAI_API_KEY"),
+            openai_api_base=os.environ.get("OPENAI_API_BASE"),
+        )
+        logger.info(f"Vision LLM: OpenAI / {model}")
 
     return llm

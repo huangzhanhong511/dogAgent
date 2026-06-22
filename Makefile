@@ -1,4 +1,4 @@
-.PHONY: test lint lint-report lint-prune lint-crossref lint-all rebuild-index accuracy-test serve
+.PHONY: test lint lint-report lint-prune lint-crossref lint-all rebuild-index accuracy-test ragas-eval ragas-eval-only serve
 
 # ── 测试 ──
 test:
@@ -6,6 +6,12 @@ test:
 
 accuracy-test:
 	cd dogAgent && .venv/bin/python tests/test_knowledge_accuracy.py --quick
+
+ragas-eval:
+	cd dogAgent && .venv/bin/python tests/test_ragas_eval.py --size 20
+
+ragas-eval-only:
+	cd dogAgent && .venv/bin/python tests/test_ragas_eval.py --eval-only
 
 accuracy-test-full:
 	cd dogAgent && .venv/bin/python tests/test_knowledge_accuracy.py
@@ -49,4 +55,4 @@ knowledge-pipeline: crawl clean-data generate-topics build-wiki rebuild-index li
 
 # ── 服务 ──
 serve:
-	cd dogAgent && .venv/bin/python -m uvicorn api.server:app --reload --port 8000
+	cd dogAgent && .venv/bin/python -m uvicorn api.server:app --reload --reload-dir . --port 8000

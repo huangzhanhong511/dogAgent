@@ -9,6 +9,8 @@
 - **DAG 记忆压缩** — 对话历史用 DAG 结构压缩，但任何信息都不会丢失，可通过 tool calling 随时回溯原文
 - **多用户多会话** — JWT 认证，每个用户独立的会话和记忆
 - **用户偏好记忆** — LLM 自动从对话中提取用户信息，跨会话持久记忆
+- **网页搜索** — 知识库不足时自动调用 DuckDuckGo 搜索，图片查询时提取并内联展示图片
+- **多模态图片理解** — 用户可粘贴或上传图片，切换到 qwen-vl-plus 视觉模型分析内容
 
 ## 项目架构
 
@@ -97,7 +99,7 @@ make serve
 
 # 方式二: 直接启动
 cd dogAgent
-python -m uvicorn api.server:app --reload --port 8000
+python -m uvicorn api.server:app --reload --reload-dir . --port 8000
 ```
 
 访问 http://localhost:8000 使用 Web UI，http://localhost:8000/docs 查看 API 文档。

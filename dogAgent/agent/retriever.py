@@ -22,6 +22,7 @@ import re
 import json
 import logging
 from dataclasses import dataclass, field
+from typing import Optional
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("retriever")
@@ -373,6 +374,99 @@ class WikiRetriever:
 
 
 # ============================================================
+# WikiVectorStore — 基于 numpy 的轻量向量检索
+# ============================================================
+
+VECTOR_DIR = os.path.join(WIKI_DIR, "vectors")
+EMBEDDINGS_PATH = os.path.join(VECTOR_DIR, "embeddings.npy")
+META_PATH = os.path.join(VECTOR_DIR, "meta.json")
+
+
+class WikiVectorStore:
+    """
+    加载 build_vector_index.py 生成的 embeddings.npy + meta.json，
+    提供余弦相似度检索。不依赖任何向量数据库，仅用 numpy。
+    """
+
+    def __init__(self, embeddings_path: str = None, meta_path: str = None):
+        self._embeddings_path = embeddings_path or EMBEDDINGS_PATH
+        self._meta_path = meta_path or META_PATH
+        self._embeddings: Optional[object] = None  # numpy array [N, D]
+        self._meta: list = []
+        self._load()
+
+    def _load(self):
+        try:
+            import numpy as np
+            if os.path.exists(self._embeddings_path) and os.path.exists(self._meta_path):
+                self._embeddings = np.load(self._embeddings_path)
+                with open(self._meta_path, "r", encoding="utf-8") as f:
+                    self._meta = json.load(f)
+                logger.info(f"向量索引已加载: {self._embeddings.shape[0]} 篇文章")
+        except Exception as e:
+            logger.warning(f"向量索引加载失败: {e}")
+
+    def is_available(self) -> bool:
+        return self._embeddings is not None and len(self._meta) > 0
+
+    def search(
+        self,
+        query_embedding: list,
+        categories: Optional[list] = None,
+        top_k: int = 3,
+    ) -> list[dict]:
+        """
+        余弦相似度搜索。
+
+        Args:
+            query_embedding: 查询向量（由 embedder.embed_query() 生成）
+            categories: 限定搜索的分类列表（如 ["03-健康医疗"]），None 表示全库搜索
+            top_k: 返回前 K 个结果
+
+        Returns:
+            list of {"title": ..., "path": ..., "category": ..., "score": ...}
+        """
+        import numpy as np
+
+        q = np.array(query_embedding, dtype=np.float32)
+        q = q / (np.linalg.norm(q) + 1e-9)
+
+        # 如果指定分类，只在该分类内搜索
+        if categories:
+            indices = [
+                i for i, m in enumerate(self._meta)
+                if m["category"] in categories
+            ]
+        else:
+            indices = list(range(len(self._meta)))
+
+        if not indices:
+            return []
+
+        subset = self._embeddings[indices]
+        # 归一化每行
+        norms = np.linalg.norm(subset, axis=1, keepdims=True) + 1e-9
+        subset_norm = subset / norms
+
+        scores = subset_norm @ q  # cosine similarity
+        top_local = int(min(top_k, len(indices)))
+        top_idx = np.argpartition(scores, -top_local)[-top_local:]
+        top_idx = top_idx[np.argsort(scores[top_idx])[::-1]]
+
+        results = []
+        for local_i in top_idx:
+            global_i = indices[local_i]
+            m = self._meta[global_i]
+            results.append({
+                "title": m["title"],
+                "path": m["path"],
+                "category": m["category"],
+                "score": float(scores[local_i]),
+            })
+        return results
+
+
+# ============================================================
 # LLMWikiIndexRetriever — Karpathy LLM Wiki 风格检索
 # ============================================================
 
@@ -442,6 +536,8 @@ class LLMWikiIndexRetriever:
 
         # 保留 WikiRetriever 作为 fallback（LLM 不可用时）
         self._fallback = WikiRetriever(wiki_dir=self.wiki_dir)
+        # 向量索引（可选，存在时替代 LLM Step 2）
+        self._vector_store = WikiVectorStore()
 
     @property
     def index(self):
@@ -459,10 +555,10 @@ class LLMWikiIndexRetriever:
 
     def retrieve(self, query: str, top_k: int = 3) -> list:
         """
-        两层 LLM 检索：
-        Step 1: 读顶层 index.md → 选相关分类（和可能的文章标题）
-        Step 2: 读分类 index.md → 选具体文章
-        Step 3: 加载文章内容
+        两层检索：
+        Step 1: LLM 读顶层 index.md → 选相关分类
+        Step 2: 向量相似度（在选中分类内）→ 选具体文章；向量索引不可用时退回 LLM
+        Step 3: 加载文章全文
         """
         if not self.llm or not self.index_content:
             return self._fallback.retrieve(query, top_k=top_k)
@@ -483,38 +579,67 @@ class LLMWikiIndexRetriever:
                 else:
                     direct_titles.append(item)
 
-            # Step 2: 对每个选中的分类，读分类索引 → 选文章
-            article_titles = list(direct_titles)
-            for cat in categories:
-                cat_index_path = os.path.join(self.wiki_dir, cat, "index.md")
-                if not os.path.exists(cat_index_path):
-                    continue
-                with open(cat_index_path, "r", encoding="utf-8") as f:
-                    cat_index_content = f.read()
-                titles = self._llm_select_articles(query, cat_index_content, top_k)
-                article_titles.extend(titles)
+            # Step 2: 向量检索（在选中分类内）
+            if self._vector_store.is_available() and categories:
+                from agent.llm import create_embeddings
+                embedder = create_embeddings()
+                query_vec = embedder.embed_query(query)
+                vec_results = self._vector_store.search(query_vec, categories=categories, top_k=top_k)
+                article_paths = [(r["title"], r["path"]) for r in vec_results]
+                logger.info(f"向量检索（分类 {categories}）: {[t for t, _ in article_paths]}")
+            else:
+                # 向量索引不可用，退回 LLM 读分类 index.md
+                if not self._vector_store.is_available():
+                    logger.info("向量索引不可用，使用 LLM Step 2")
+                article_titles = list(direct_titles)
+                for cat in categories:
+                    cat_index_path = os.path.join(self.wiki_dir, cat, "index.md")
+                    if not os.path.exists(cat_index_path):
+                        continue
+                    with open(cat_index_path, "r", encoding="utf-8") as f:
+                        cat_index_content = f.read()
+                    titles = self._llm_select_articles(query, cat_index_content, top_k)
+                    article_titles.extend(titles)
+                article_paths = [
+                    (t, self._fallback.index[t]["path"])
+                    for t in article_titles
+                    if t in self._fallback.index
+                ]
 
-            if not article_titles:
-                logger.info("LLM 未选中任何文章，fallback 到规则检索")
+            # 补充 direct_titles（Step 1 中顶层索引直接命中的文章）
+            for title in direct_titles:
+                if title in self._fallback.index:
+                    path = self._fallback.index[title]["path"]
+                    if (title, path) not in article_paths:
+                        article_paths.insert(0, (title, path))
+
+            if not article_paths:
+                logger.info("未选中任何文章，fallback 到规则检索")
                 return self._fallback.retrieve(query, top_k=top_k)
 
             # Step 3: 加载选中页面的内容
             results = []
             seen = set()
-            for title in article_titles:
+            for title, path in article_paths:
                 if title in seen:
                     continue
                 seen.add(title)
-                result = self._load_wiki_page(title)
-                if result:
-                    results.append(result)
+                content = self._fallback._load_article(path)
+                if content:
+                    results.append(RetrievalResult(
+                        title=title,
+                        path=path,
+                        score=1.0,
+                        match_reasons=["向量检索" if self._vector_store.is_available() else "LLM index 检索"],
+                        content=content,
+                    ))
                 if len(results) >= top_k:
                     break
 
             if not results:
                 return self._fallback.retrieve(query, top_k=top_k)
 
-            logger.info(f"LLM 两层检索: {[r.title for r in results]}")
+            logger.info(f"检索结果: {[r.title for r in results]}")
             return results
 
         except Exception as e:
@@ -561,23 +686,6 @@ class LLMWikiIndexRetriever:
             logger.warning(f"LLM 返回非 JSON: {raw[:100]}")
 
         return []
-
-    def _load_wiki_page(self, title: str) -> RetrievalResult | None:
-        """根据标题加载 Wiki 页面"""
-        # 从 fallback 的 index 中查找路径
-        if title in self._fallback.index:
-            entry = self._fallback.index[title]
-            path = entry["path"]
-            content = self._fallback._load_article(path)
-            if content:
-                return RetrievalResult(
-                    title=title,
-                    path=path,
-                    score=1.0,
-                    match_reasons=["LLM index 检索"],
-                    content=content,
-                )
-        return None
 
     def format_context(self, results: list) -> str:
         """格式化检索结果为 Prompt 上下文（与 WikiRetriever 兼容）"""

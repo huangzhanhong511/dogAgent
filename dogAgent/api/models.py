@@ -8,12 +8,14 @@ class ChatRequest(BaseModel):
     message: str = Field(..., description="用户消息")
     user_id: str = Field(default="default_user", description="用户ID")
     session_id: Optional[str] = Field(default=None, description="会话ID，空则自动选最近的")
+    image_base64: Optional[str] = Field(default=None, description="用户上传的图片（base64，含 data:image/... 前缀）")
 
 
 class ChatResponse(BaseModel):
     answer: str
     session_id: str
     sources: list[str] = Field(default_factory=list)
+    images: list[str] = Field(default_factory=list, description="图片直链列表（来自 image_search 工具）")
     rewritten_query: Optional[str] = None
 
 
